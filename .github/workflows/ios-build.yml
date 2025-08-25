@@ -1,1 +1,35 @@
+name: Build and Upload iOS App to App Store
 
+on:
+  push:
+    branches:
+      - main  # Trigger on pushing to the main branch
+
+jobs:
+  build:
+    runs-on: macos-latest  # Use macOS runners
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2  # Checkout the repo code
+
+    - name: Set up Ruby (for fastlane)
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '2.7'
+
+    - name: Install dependencies
+      run: |
+        gem install fastlane  # Install fastlane (tool for iOS automation)
+        bundle install  # Install dependencies listed in your Gemfile, if any
+        npm install  # Install any other Node.js dependencies (e.g., Capacitor)
+    
+    - name: Build the iOS app using Capacitor
+      run: |
+        npx cap sync ios  # Sync Capacitor with iOS platform
+        npx cap open ios  # Open the iOS project in Xcode
+        xcodebuild -workspace ios/App.xcworkspace -scheme App -configuration Release archive -archivePath $PWD/build/App.xcarchive  # Archive the app
+    
+    - name: Upload app to App Store using fastlane
+      run: |
+        fastlane deliver --ipa $PWD/build/App.ipa --username ${{ secrets.APPLE_ID }} --password ${{ secrets.APPLE_PASSWORD }} --app_identifier "com.example.app" --skip_screenshots --skip_metadata
